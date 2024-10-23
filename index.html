@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billiards Aiming</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+            display: block; /* Remove extra space below the canvas */
+            background-color: #006400; /* Dark green background for the table */
+        }
+    </style>
+</head>
+<body>
+    <canvas id="billiardsCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('billiardsCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Set canvas size to match the window size
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const ballRadius = 57.15 / 2; // Convert diameter to radius in mm
+        const minDistance = 100; // Minimum distance in mm
+        const minDistancePixels = minDistance / 2; // Minimum distance in pixels
+
+        let cueBallX, cueBallY, targetBallX, targetBallY;
+
+        // Function to generate random positions for the balls
+        function generateBallPositions() {
+            // Generate random position for the cue ball
+            cueBallX = Math.random() * (canvas.width - ballRadius * 2) + ballRadius;
+            cueBallY = Math.random() * (canvas.height - ballRadius * 2) + ballRadius;
+
+            // Generate random position for the target ball
+            do {
+                targetBallX = Math.random() * (canvas.width - ballRadius * 2) + ballRadius;
+                targetBallY = Math.random() * (canvas.height - ballRadius * 2) + ballRadius;
+            } while (Math.sqrt((targetBallX - cueBallX) ** 2 + (targetBallY - cueBallY) ** 2) < minDistancePixels);
+        }
+
+        // Function to draw the billiard table and balls
+        function drawTable() {
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw the billiard table (optional)
+            ctx.fillStyle = '#006400'; // Dark green background for the table
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Generate positions for the balls
+            generateBallPositions();
+
+            // Draw the cue ball
+            ctx.beginPath();
+            ctx.arc(cueBallX, cueBallY, ballRadius, 0, Math.PI * 2);
+            ctx.fillStyle = 'white'; // Cue ball color
+            ctx.fill();
+            ctx.closePath();
+
+            // Draw the target ball
+            ctx.beginPath();
+            ctx.arc(targetBallX, targetBallY, ballRadius, 0, Math.PI * 2);
+            ctx.fillStyle = 'red'; // Target ball color
+            ctx.fill();
+            ctx.closePath();
+
+            // Determine the target corner based on the position of the cue ball
+            let targetCornerX, targetCornerY;
+            if (cueBallX < targetBallX) {
+                // Cue ball is on the left side, target the top right corner
+                targetCornerX = canvas.width;
+                targetCornerY = 0;
+            } else {
+                // Cue ball is on the right side, target the top left corner
+                targetCornerX = 0;
+                targetCornerY = 0;
+            }
+
+            // Draw the aiming line to the determined corner
+            ctx.beginPath();
+            ctx.moveTo(targetBallX, targetBallY); // Start at the target ball
+            ctx.lineTo(targetCornerX, targetCornerY); // Draw to the target corner
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; // Line color with transparency
+            ctx.lineWidth = 2; // Line width
+            ctx.stroke();
+            ctx.closePath();
+
+            // Calculate the direction from the target ball to the corner
+            const angleToCorner = Math.atan2(targetBallY - targetCornerY, targetBallX - targetCornerX);
+
+            // Calculate the position for the ghost ball, extending one ball distance away from the target ball
+            const ghostBallX = targetBallX + (ballRadius * 2 * Math.cos(angleToCorner));
+            const ghostBallY = targetBallY + (ballRadius * 2 * Math.sin(angleToCorner));
+
+            // Draw the ghost ball
+            ctx.beginPath();
+            ctx.arc(ghostBallX, ghostBallY, ballRadius, 0, Math.PI * 2); // Ghost ball size
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'; // Ghost ball color with transparency
+            ctx.fill();
+            ctx.closePath();
+
+            // Calculate the position for the aiming dot, extending one ball distance away from the target ball
+            const dotX = targetBallX + (ballRadius * 2 * Math.cos(angleToCorner));
+            const dotY = targetBallY + (ballRadius * 2 * Math.sin(angleToCorner));
+
+            // Draw the dot at the calculated position
+            ctx.beginPath();
+            ctx.arc(dotX, dotY, 5, 0, Math.PI * 2); // Dot size
+            ctx.fillStyle = 'blue'; // Dot color
+            ctx.fill();
+            ctx.closePath();
+
+            // Draw the line from the cue ball to the ghost ball
+            ctx.beginPath();
+            ctx.moveTo(cueBallX, cueBallY); // Start at the cue ball
+            ctx.lineTo(ghostBallX, ghostBallY); // Draw to the ghost ball
+            ctx.strokeStyle = 'green'; // Line color for cue ball to ghost ball
+            ctx.lineWidth = 2; // Line width
+            ctx.stroke();
+            ctx.closePath();
+
+            // Calculate the aiming angle
+            const deltaX1 = ghostBallX - cueBallX; // Change in X for cue ball to ghost ball
+            const deltaY1 = ghostBallY - cueBallY; // Change in Y for cue ball to ghost ball
+            const angle1 = Math.atan2(deltaY1, deltaX1); // Angle for cue ball to ghost ball
+
+            const deltaX2 = targetBallX - cueBallX; // Change in X for cue ball to target ball
+            const deltaY2 = targetBallY - cueBallY; // Change in Y for cue ball to target ball
+            const angle2 = Math.atan2(deltaY2, deltaX2); // Angle for cue ball to target ball
+
+            // Calculate the difference between the two angles
+            const angleDifference = (angle2 - angle1) * (180 / Math.PI); // Convert to degrees
+            console.log(`Aim angle: ${angleDifference.toFixed(1)} degrees`);
+
+            // Draw the angle arc
+            const angleArcX = (cueBallX + ghostBallX) / 2; // Midpoint for the angle arc
+            const angleArcY = (cueBallY + ghostBallY) / 2; // Midpoint for the angle arc
+            const angleRadius = 50; // Radius for the angle arc
+
+            ctx.beginPath();
+            ctx.arc(angleArcX, angleArcY, angleRadius, angle1, angle2); // Draw the angle arc
+            ctx.strokeStyle = 'yellow'; // Color for the angle arc
+            ctx.lineWidth = 2; // Line width for the angle arc
+            ctx.stroke();
+            ctx.closePath();
+
+            // Optionally, draw angle markers
+            ctx.fillStyle = 'yellow'; // Color for angle markers
+            ctx.fillText('Angle', angleArcX + 10, angleArcY - 10); // Label for the angle
+        }
+
+        // Function to handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            drawTable(); // Redraw the table on resize
+        });
+
+        drawTable();
+    </script>
+</body>
+</html>
